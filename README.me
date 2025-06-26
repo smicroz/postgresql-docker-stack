@@ -15,12 +15,18 @@ Este directorio contiene una configuración completa de Docker para PostgreSQL c
 
 ```
 postgresql/
-├── docker-compose.yml    # Configuración principal de Docker
-├── .env.example        # Plantilla de variables de entorno (público)
-├── .env               # Variables de entorno (privado, crear desde .env.example)
-├── .gitignore         # Archivos a ignorar en Git
-├── README.me          # Esta documentación
-└── init-scripts/      # Scripts SQL de inicialización (opcional)
+├── docker-compose.yml              # Configuración principal de Docker (mejorada)
+├── .env.example                   # Plantilla de variables de entorno (público)
+├── .env                          # Variables de entorno (privado, crear desde .env.example)
+├── .gitignore                    # Archivos a ignorar en Git
+├── README.me                     # Esta documentación
+├── configure-post-hardening.sh  # Script de configuración post-hardening
+├── quick-start.sh               # Script de inicio rápido
+├── backup.sh                    # Script de backup automatizado
+├── maintenance.sh               # Script de mantenimiento y administración
+├── init-scripts/                # Scripts SQL de inicialización (opcional)
+├── backups/                     # Directorio de backups (se crea automáticamente)
+└── emergency_backups/           # Backups de emergencia (se crea automáticamente)
 ```
 
 ## Configuración inicial
@@ -40,14 +46,45 @@ postgresql/
    mkdir -p init-scripts
    ```
 
+## Configuración Post-Hardening
+
+Si has ejecutado un script de hardening de seguridad en tu servidor, necesitas configurar el firewall y los puertos para PostgreSQL:
+
+1. **Ejecutar el script de configuración post-hardening:**
+   ```bash
+   sudo ./configure-post-hardening.sh
+   ```
+
+   Este script configurará automáticamente:
+   - Reglas UFW para PostgreSQL y pgAdmin
+   - Fail2Ban para protección contra ataques de fuerza bruta
+   - Optimizaciones del kernel para PostgreSQL
+   - Scripts de monitoreo
+   - Rotación de logs
+
+2. **El script preguntará sobre:**
+   - Permitir acceso desde internet a PostgreSQL (NO recomendado)
+   - Permitir acceso desde internet a pgAdmin (según necesidad)
+   - Configuración de redes privadas permitidas
+
 ## Uso
 
-### Iniciar los servicios
+### Inicio rápido (recomendado)
+```bash
+# Configuración automática con detección de hardening
+./quick-start.sh
+
+# Con permisos de root si se detecta hardening
+sudo ./quick-start.sh
+```
+
+### Inicio manual
+#### Iniciar los servicios
 ```bash
 docker-compose up -d
 ```
 
-### Ver logs
+#### Ver logs
 ```bash
 # Todos los servicios
 docker-compose logs -f
@@ -59,12 +96,12 @@ docker-compose logs -f postgres
 docker-compose logs -f pgadmin
 ```
 
-### Detener los servicios
+#### Detener los servicios
 ```bash
 docker-compose down
 ```
 
-### Detener y eliminar volumes (⚠️ ELIMINA TODOS LOS DATOS)
+#### Detener y eliminar volumes (⚠️ ELIMINA TODOS LOS DATOS)
 ```bash
 docker-compose down -v
 ```
@@ -111,14 +148,43 @@ CREATE TABLE users (
 
 ## Backup y Restore
 
-### Crear backup
+### Backup automatizado
 ```bash
+# Backup de la base de datos principal
+./backup.sh
+
+# Backup de todas las bases de datos
+./backup.sh --all
+
+# Backup con compresión
+./backup.sh --all --compress
+
+# Backup de base de datos específica
+./backup.sh --database mi_base_datos
+
+# Backup con retención personalizada (30 días)
+./backup.sh --all --retention 30
+
+# Mostrar ayuda
+./backup.sh --help
+```
+
+### Backup manual
+```bash
+# Crear backup manual
 docker-compose exec postgres pg_dump -U your_user your_database > backup.sql
+
+# Backup completo del cluster
+docker-compose exec postgres pg_dumpall -U your_user > cluster_backup.sql
 ```
 
 ### Restaurar backup
 ```bash
+# Restaurar desde backup
 docker-compose exec -T postgres psql -U your_user your_database < backup.sql
+
+# Restaurar cluster completo
+docker-compose exec -T postgres psql -U your_user < cluster_backup.sql
 ```
 
 ## Troubleshooting
@@ -143,13 +209,66 @@ docker-compose exec postgres pg_isready -U your_user
 docker-compose restart
 ```
 
+### Monitoreo post-hardening
+```bash
+# Script de monitoreo completo
+sudo /usr/local/bin/postgresql-monitor.sh
+
+# Ver estado del firewall
+sudo ufw status
+
+# Ver estado de Fail2Ban
+sudo fail2ban-client status
+sudo fail2ban-client status postgresql
+
+# Herramientas de mantenimiento
+./maintenance.sh status          # Estado de servicios
+./maintenance.sh health          # Verificación de salud
+./maintenance.sh monitor         # Monitoreo en tiempo real
+./maintenance.sh security        # Verificar configuración de seguridad
+./maintenance.sh maintenance     # Tareas de mantenimiento PostgreSQL
+```
+
+### Problemas comunes después del hardening
+
+1. **No puedo conectarme a PostgreSQL:**
+   - Verificar que UFW permite el puerto: `sudo ufw status | grep 5432`
+   - Ejecutar el script post-hardening si no se ha hecho
+
+2. **pgAdmin no carga:**
+   - Verificar que UFW permite el puerto: `sudo ufw status | grep 5050`
+   - Comprobar logs: `docker-compose logs pgadmin`
+
+3. **Conexión bloqueada por Fail2Ban:**
+   - Ver IPs bloqueadas: `sudo fail2ban-client status postgresql`
+   - Desbloquear IP: `sudo fail2ban-client set postgresql unbanip YOUR_IP`
+
 ## Seguridad
 
+### Características de seguridad implementadas
 - ✅ Contraseñas definidas en variables de entorno
 - ✅ Red interna para comunicación entre contenedores
 - ✅ Volumes con permisos apropiados
 - ✅ Health checks para monitoreo
 - ✅ Archivo .env excluido de Git
+- ✅ Límites de recursos para prevenir DoS
+- ✅ Configuraciones de seguridad adicionales (no-new-privileges)
+- ✅ Configuración UFW post-hardening
+- ✅ Fail2Ban para PostgreSQL
+- ✅ Optimizaciones del kernel
+
+### Scripts de seguridad
+- `configure-post-hardening.sh`: Configura firewall y seguridad después del hardening
+- Configuración automática de UFW para puertos PostgreSQL y pgAdmin
+- Protección Fail2Ban contra ataques de fuerza bruta
+- Monitoreo de seguridad integrado
+
+### Mejores prácticas aplicadas
+1. **Autenticación**: MD5 para conexiones remotas, trust para locales
+2. **Red**: Solo redes privadas permitidas por defecto
+3. **Recursos**: Límites de CPU y memoria configurados
+4. **Logs**: Rotación automática de logs de Docker
+5. **Backups**: Sistema automatizado con retención configurable
 
 ## Recursos adicionales
 

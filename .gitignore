@@ -43,8 +43,17 @@ docker-compose.override.yml
 # Local scripts or configurations
 local/
 scripts/local/
+*.local
 
 # SSL certificates (if any)
 *.crt
 *.key
 *.pem
+
+# Log files from monitoring
+postgresql-monitor.log
+setup.log
+
+# Backup files created by scripts
+backup_*.sql
+dump_*.sql
