@@ -138,12 +138,7 @@ for dir in "${DIRECTORIES[@]}"; do
     if [[ -d "$dir" ]]; then
         check_mark "Directorio $dir existe"
     else
-        if [[ "$dir" == "init-scripts" ]]; then
-            warning "Directorio $dir no existe (crear si necesitas scripts de inicialización)"
-            WARNINGS=$((WARNINGS + 1))
-        else
-            info "Directorio $dir no existe (se creará automáticamente al iniciar)"
-        fi
+        info "Directorio $dir no existe (se creará automáticamente al iniciar)"
     fi
 done
 

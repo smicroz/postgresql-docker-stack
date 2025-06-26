@@ -1,4 +1,14 @@
-# Enviro# pgAdmin session data
+# Enviro# # Database data and logs (if using local volumes)
+data/
+logs/
+*.log
+
+# PostgreSQL initialization scripts (environment-specific)
+init-scripts/*
+!init-scripts/.gitkeep
+
+# pgAdmin session data
+pgladmin_data/ session data
 pgladmin_data/
 
 # pgAdmin configuration data
