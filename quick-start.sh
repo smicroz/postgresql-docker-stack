@@ -45,6 +45,17 @@ check_dependencies() {
         exit 1
     fi
     
+    # Verificar que Docker daemon esté corriendo
+    if ! docker info &> /dev/null; then
+        error "Docker daemon no está corriendo"
+        info "Inicia Docker y vuelve a intentar"
+        exit 1
+    fi
+    
+    if ! command -v curl &> /dev/null; then
+        warning "curl no está instalado - se omitirá la verificación de pgAdmin"
+    fi
+    
     log "Dependencias verificadas correctamente"
 }
 
@@ -112,11 +123,35 @@ check_hardening_needed() {
     fi
 }
 
-# Crear directorio init-scripts si no existe
-setup_init_scripts() {
+# Crear directorios necesarios
+setup_directories() {
     if [[ ! -d "init-scripts" ]]; then
         log "Creando directorio init-scripts..."
         mkdir -p init-scripts
+    fi
+    
+    # Crear directorios necesarios para bind mounts
+    if [[ ! -d "postgres_data" ]]; then
+        log "Creando directorio postgres_data..."
+        mkdir -p postgres_data
+        # Asegurar permisos correctos para PostgreSQL (usuario 999)
+        if command -v chown &> /dev/null; then
+            chown 999:999 postgres_data 2>/dev/null || warning "No se pudieron configurar permisos para postgres_data"
+        fi
+    fi
+    
+    if [[ ! -d "pgadmin_data" ]]; then
+        log "Creando directorio pgadmin_data..."
+        mkdir -p pgadmin_data
+        # Asegurar permisos correctos para pgAdmin (usuario 5050)
+        if command -v chown &> /dev/null; then
+            chown 5050:5050 pgadmin_data 2>/dev/null || warning "No se pudieron configurar permisos para pgadmin_data"
+        fi
+    fi
+    
+    if [[ ! -d "pgadmin-config" ]]; then
+        log "Creando directorio pgadmin-config..."
+        mkdir -p pgadmin-config
     fi
 }
 
@@ -156,8 +191,11 @@ wait_for_services() {
     # Esperar pgAdmin
     echo -n "Esperando pgAdmin"
     for i in {1..30}; do
-        if curl -s http://localhost:${PGADMIN_PORT:-5050} &>/dev/null; then
+        if command -v curl &> /dev/null && curl -s http://localhost:${PGADMIN_PORT:-5050} &>/dev/null; then
             echo " ✓"
+            break
+        elif ! command -v curl &> /dev/null && [[ $i -eq 10 ]]; then
+            echo " ⚠️ (curl no disponible, asumiendo que está listo)"
             break
         fi
         echo -n "."
@@ -217,7 +255,7 @@ main() {
     check_dependencies
     check_env_file
     check_hardening_needed
-    setup_init_scripts
+    setup_directories
     start_services
     wait_for_services
     show_connection_info

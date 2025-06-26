@@ -78,7 +78,7 @@ show_status() {
     
     echo ""
     log "=== USO DE RECURSOS ==="
-    docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}" $CONTAINER_NAME $PGLADMIN_CONTAINER 2>/dev/null
+    docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}" $CONTAINER_NAME $PGADMIN_CONTAINER 2>/dev/null
 }
 
 # Mostrar logs
@@ -200,7 +200,7 @@ monitor_real_time() {
         echo ""
         
         # Recursos
-        docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" $CONTAINER_NAME $PGLADMIN_CONTAINER 2>/dev/null
+        docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" $CONTAINER_NAME $PGADMIN_CONTAINER 2>/dev/null
         echo ""
         
         # Conexiones activas
@@ -260,7 +260,7 @@ health_check() {
         log "✓ Contenedor PostgreSQL está activo"
     fi
     
-    if ! docker ps | grep -q "$PGLADMIN_CONTAINER"; then
+    if ! docker ps | grep -q "$PGADMIN_CONTAINER"; then
         error "Contenedor pgAdmin no está ejecutándose"
         ((issues++))
     else

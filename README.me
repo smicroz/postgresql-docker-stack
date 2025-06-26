@@ -20,6 +20,7 @@ postgresql/
 ├── .env                          # Variables de entorno (privado, crear desde .env.example)
 ├── .gitignore                    # Archivos a ignorar en Git
 ├── README.me                     # Esta documentación
+├── check-prerequisites.sh        # Script de verificación de pre-requisitos
 ├── configure-post-hardening.sh  # Script de configuración post-hardening
 ├── quick-start.sh               # Script de inicio rápido
 ├── backup.sh                    # Script de backup automatizado
@@ -31,17 +32,22 @@ postgresql/
 
 ## Configuración inicial
 
-1. **Copiar variables de entorno:**
+1. **Verificar pre-requisitos:**
+   ```bash
+   ./check-prerequisites.sh
+   ```
+
+2. **Copiar variables de entorno:**
    ```bash
    cp .env.example .env
    ```
 
-2. **Editar el archivo .env** con tus credenciales:
+3. **Editar el archivo .env** con tus credenciales:
    ```bash
    nano .env
    ```
 
-3. **Crear directorio de scripts (opcional):**
+4. **Crear directorio de scripts (opcional):**
    ```bash
    mkdir -p init-scripts
    ```
