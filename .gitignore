@@ -1,4 +1,11 @@
-# Environment variables (contains sensitive data)
+# Enviro# pgAdmin session data
+pgladmin_data/
+
+# pgAdmin configuration data
+pgladmin-config/
+
+# PostgreSQL data
+postgres_data/ variables (contains sensitive data)
 .env
 
 # Database data and logs (if using local volumes)

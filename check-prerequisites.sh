@@ -1,7 +1,44 @@
 #!/bin/bash
 
 #===============================================================================
-# SCRIPT DE VERIFICACIÓN DE PRE-REQUISITOS PARA POSTGRESQL DOCKER
+# SCRIPT DE VERIFICACIÓN DE PRE# Verificar dir# Verificar directorios necesarios
+log "Verificando directorios..."
+# Estos directorios son necesarios para:
+# - postgres_data: Almacena los datos de PostgreSQL (tablas, índices, configuraciones)
+# - pgladmin_data: Guarda las configuraciones y sesiones de pgAdmin
+# - init-scripts: Scripts SQL que se ejecutan al crear la BD por primera vez
+# - pgladmin-config: Configuraciones adicionales de pgAdmin (servers predefinidos, etc.)
+# 
+# NOTA: Las carpetas de datos (postgres_data, pgladmin_data, pgladmin-config) están en .gitignore
+# y se crean automáticamente al iniciar los contenedores
+DIRECTORIES=("postgres_data" "pgladmin_data" "init-scripts" "pgladmin-config")
+for dir in "${DIRECTORIES[@]}"; do
+    if [[ -d "$dir" ]]; then
+        check_mark "Directorio $dir existe"
+    else
+        if [[ "$dir" == "init-scripts" ]]; then
+            warning "Directorio $dir no existe (crear si necesitas scripts de inicialización)"
+            WARNINGS=$((WARNINGS + 1))
+        else
+            info "Directorio $dir no existe (se creará automáticamente al iniciar)"
+        fi
+    fi
+donecesarios
+log "Verificando directorios..."
+# Estos directorios son necesarios para:
+# - postgres_data: Almacena los datos de PostgreSQL (tablas, índices, configuraciones)
+# - pgadmin_data: Guarda las configuraciones y sesiones de pgAdmin
+# - init-scripts: Scripts SQL que se ejecutan al crear la BD por primera vez
+# - pgladmin-config: Configuraciones adicionales de pgAdmin (servers predefinidos, etc.)
+DIRECTORIES=("postgres_data" "pgadmin_data" "init-scripts" "pgladmin-config")
+for dir in "${DIRECTORIES[@]}"; do
+    if [[ -d "$dir" ]]; then
+        check_mark "Directorio $dir existe"
+    else
+        warning "Directorio $dir no existe (se creará automáticamente al iniciar)"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+done PARA POSTGRESQL DOCKER
 # Descripción: Verifica que todos los pre-requisitos estén cumplidos
 # Autor: Administrador de Sistemas
 # Fecha: $(date +%Y-%m-%d)
@@ -68,9 +105,15 @@ fi
 
 # Verificar Docker Compose
 log "Verificando Docker Compose..."
-if command -v docker-compose &> /dev/null; then
+# Verificar primero el comando integrado 'docker compose'
+if docker compose version &> /dev/null; then
+    COMPOSE_VERSION=$(docker compose version --short 2>/dev/null || docker compose version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    check_mark "Docker Compose integrado instalado: $COMPOSE_VERSION"
+# Si no está disponible, verificar docker-compose standalone
+elif command -v docker-compose &> /dev/null; then
     COMPOSE_VERSION=$(docker-compose --version | cut -d ' ' -f3 | tr -d ',')
-    check_mark "Docker Compose instalado: $COMPOSE_VERSION"
+    check_mark "Docker Compose standalone instalado: $COMPOSE_VERSION"
+    warning "Se recomienda usar 'docker compose' en lugar de 'docker-compose'"
 else
     x_mark "Docker Compose no está instalado"
     ERRORS=$((ERRORS + 1))
