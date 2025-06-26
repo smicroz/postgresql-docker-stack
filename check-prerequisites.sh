@@ -106,9 +106,9 @@ if [[ -f ".env" ]]; then
     fi
     
     if [[ -n "$PGADMIN_PASSWORD" ]]; then
-        check_mark "PGLADMIN_PASSWORD configurada"
+        check_mark "PGADMIN_PASSWORD configurada"
     else
-        x_mark "PGLADMIN_PASSWORD no está configurada en .env"
+        x_mark "PGADMIN_PASSWORD no está configurada en .env"
         ERRORS=$((ERRORS + 1))
     fi
 else
@@ -145,7 +145,7 @@ done
 # Verificar puertos disponibles
 log "Verificando puertos..."
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
-PGLADMIN_PORT=${PGLADMIN_PORT:-5050}
+PGADMIN_PORT=${PGADMIN_PORT:-5050}
 
 if command -v lsof &> /dev/null; then
     if lsof -Pi :$POSTGRES_PORT -sTCP:LISTEN -t &> /dev/null; then
@@ -155,11 +155,11 @@ if command -v lsof &> /dev/null; then
         check_mark "Puerto $POSTGRES_PORT disponible"
     fi
     
-    if lsof -Pi :$PGLADMIN_PORT -sTCP:LISTEN -t &> /dev/null; then
-        x_mark "Puerto $PGLADMIN_PORT ya está en uso"
+    if lsof -Pi :$PGADMIN_PORT -sTCP:LISTEN -t &> /dev/null; then
+        x_mark "Puerto $PGADMIN_PORT ya está en uso"
         ERRORS=$((ERRORS + 1))
     else
-        check_mark "Puerto $PGLADMIN_PORT disponible"
+        check_mark "Puerto $PGADMIN_PORT disponible"
     fi
 elif command -v netstat &> /dev/null; then
     if netstat -tuln | grep -q ":$POSTGRES_PORT "; then
@@ -169,11 +169,11 @@ elif command -v netstat &> /dev/null; then
         check_mark "Puerto $POSTGRES_PORT disponible"
     fi
     
-    if netstat -tuln | grep -q ":$PGLADMIN_PORT "; then
-        x_mark "Puerto $PGLADMIN_PORT ya está en uso"
+    if netstat -tuln | grep -q ":$PGADMIN_PORT "; then
+        x_mark "Puerto $PGADMIN_PORT ya está en uso"
         ERRORS=$((ERRORS + 1))
     else
-        check_mark "Puerto $PGLADMIN_PORT disponible"
+        check_mark "Puerto $PGADMIN_PORT disponible"
     fi
 else
     warning "No se puede verificar disponibilidad de puertos (lsof/netstat no disponibles)"
