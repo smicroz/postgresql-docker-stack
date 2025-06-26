@@ -1,0 +1,50 @@
+# Environment variables (contains sensitive data)
+.env
+
+# Database data and logs (if using local volumes)
+data/
+logs/
+*.log
+
+# pgAdmin session data
+pgadmin_data/
+
+# PostgreSQL data
+postgres_data/
+
+# Backup files
+*.sql
+*.dump
+*.backup
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Docker override files
+docker-compose.override.yml
+
+# Local scripts or configurations
+local/
+scripts/local/
+
+# SSL certificates (if any)
+*.crt
+*.key
+*.pem

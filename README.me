@@ -1,0 +1,159 @@
+# PostgreSQL Docker Setup
+
+Este directorio contiene una configuración completa de Docker para PostgreSQL con pgAdmin incluido.
+
+## Características
+
+- **PostgreSQL 15 Alpine**: Base de datos principal con imagen optimizada
+- **pgAdmin 4**: Interfaz web para administración de la base de datos
+- **Volumes persistentes**: Los datos se mantienen entre reinicios
+- **Health checks**: Monitoreo automático del estado de la base de datos
+- **Variables de entorno**: Configuración segura mediante archivos .env
+- **Red dedicada**: Comunicación segura entre contenedores
+
+## Estructura de archivos
+
+```
+postgresql/
+├── docker-compose.yml    # Configuración principal de Docker
+├── .env.example        # Plantilla de variables de entorno (público)
+├── .env               # Variables de entorno (privado, crear desde .env.example)
+├── .gitignore         # Archivos a ignorar en Git
+├── README.me          # Esta documentación
+└── init-scripts/      # Scripts SQL de inicialización (opcional)
+```
+
+## Configuración inicial
+
+1. **Copiar variables de entorno:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Editar el archivo .env** con tus credenciales:
+   ```bash
+   nano .env
+   ```
+
+3. **Crear directorio de scripts (opcional):**
+   ```bash
+   mkdir -p init-scripts
+   ```
+
+## Uso
+
+### Iniciar los servicios
+```bash
+docker-compose up -d
+```
+
+### Ver logs
+```bash
+# Todos los servicios
+docker-compose logs -f
+
+# Solo PostgreSQL
+docker-compose logs -f postgres
+
+# Solo pgAdmin
+docker-compose logs -f pgadmin
+```
+
+### Detener los servicios
+```bash
+docker-compose down
+```
+
+### Detener y eliminar volumes (⚠️ ELIMINA TODOS LOS DATOS)
+```bash
+docker-compose down -v
+```
+
+## Acceso
+
+### PostgreSQL
+- **Host**: localhost
+- **Puerto**: 5432 (configurable en .env)
+- **Base de datos**: Definida en POSTGRES_DB
+- **Usuario**: Definido en POSTGRES_USER
+- **Contraseña**: Definida en POSTGRES_PASSWORD
+
+### pgAdmin
+- **URL**: http://localhost:5050 (configurable en .env)
+- **Email**: Definido en PGADMIN_EMAIL
+- **Contraseña**: Definida en PGADMIN_PASSWORD
+
+## Conexión desde aplicaciones
+
+### String de conexión
+```
+postgresql://username:password@localhost:5432/database_name
+```
+
+### Ejemplo con psql
+```bash
+psql -h localhost -p 5432 -U your_user -d your_database
+```
+
+## Scripts de inicialización
+
+Puedes agregar scripts SQL o shell en el directorio `init-scripts/` que se ejecutarán automáticamente al crear la base de datos por primera vez:
+
+```sql
+-- init-scripts/01-create-tables.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## Backup y Restore
+
+### Crear backup
+```bash
+docker-compose exec postgres pg_dump -U your_user your_database > backup.sql
+```
+
+### Restaurar backup
+```bash
+docker-compose exec -T postgres psql -U your_user your_database < backup.sql
+```
+
+## Troubleshooting
+
+### Ver estado de contenedores
+```bash
+docker-compose ps
+```
+
+### Acceder al contenedor de PostgreSQL
+```bash
+docker-compose exec postgres bash
+```
+
+### Verificar conectividad
+```bash
+docker-compose exec postgres pg_isready -U your_user
+```
+
+### Reiniciar servicios
+```bash
+docker-compose restart
+```
+
+## Seguridad
+
+- ✅ Contraseñas definidas en variables de entorno
+- ✅ Red interna para comunicación entre contenedores
+- ✅ Volumes con permisos apropiados
+- ✅ Health checks para monitoreo
+- ✅ Archivo .env excluido de Git
+
+## Recursos adicionales
+
+- [Documentación oficial de PostgreSQL](https://www.postgresql.org/docs/)
+- [Documentación de pgAdmin](https://www.pgadmin.org/docs/)
+- [Docker Hub - PostgreSQL](https://hub.docker.com/_/postgres)
+- [Docker Hub - pgAdmin](https://hub.docker.com/r/dpage/pgadmin4/)
