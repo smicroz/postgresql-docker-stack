@@ -1,44 +1,7 @@
 #!/bin/bash
 
 #===============================================================================
-# SCRIPT DE VERIFICACIÓN DE PRE# Verificar dir# Verificar directorios necesarios
-log "Verificando directorios..."
-# Estos directorios son necesarios para:
-# - postgres_data: Almacena los datos de PostgreSQL (tablas, índices, configuraciones)
-# - pgladmin_data: Guarda las configuraciones y sesiones de pgAdmin
-# - init-scripts: Scripts SQL que se ejecutan al crear la BD por primera vez
-# - pgladmin-config: Configuraciones adicionales de pgAdmin (servers predefinidos, etc.)
-# 
-# NOTA: Las carpetas de datos (postgres_data, pgladmin_data, pgladmin-config) están en .gitignore
-# y se crean automáticamente al iniciar los contenedores
-DIRECTORIES=("postgres_data" "pgladmin_data" "init-scripts" "pgladmin-config")
-for dir in "${DIRECTORIES[@]}"; do
-    if [[ -d "$dir" ]]; then
-        check_mark "Directorio $dir existe"
-    else
-        if [[ "$dir" == "init-scripts" ]]; then
-            warning "Directorio $dir no existe (crear si necesitas scripts de inicialización)"
-            WARNINGS=$((WARNINGS + 1))
-        else
-            info "Directorio $dir no existe (se creará automáticamente al iniciar)"
-        fi
-    fi
-donecesarios
-log "Verificando directorios..."
-# Estos directorios son necesarios para:
-# - postgres_data: Almacena los datos de PostgreSQL (tablas, índices, configuraciones)
-# - pgadmin_data: Guarda las configuraciones y sesiones de pgAdmin
-# - init-scripts: Scripts SQL que se ejecutan al crear la BD por primera vez
-# - pgladmin-config: Configuraciones adicionales de pgAdmin (servers predefinidos, etc.)
-DIRECTORIES=("postgres_data" "pgadmin_data" "init-scripts" "pgladmin-config")
-for dir in "${DIRECTORIES[@]}"; do
-    if [[ -d "$dir" ]]; then
-        check_mark "Directorio $dir existe"
-    else
-        warning "Directorio $dir no existe (se creará automáticamente al iniciar)"
-        WARNINGS=$((WARNINGS + 1))
-    fi
-done PARA POSTGRESQL DOCKER
+# SCRIPT DE VERIFICACIÓN DE PRE-REQUISITOS PARA POSTGRESQL DOCKER
 # Descripción: Verifica que todos los pre-requisitos estén cumplidos
 # Autor: Administrador de Sistemas
 # Fecha: $(date +%Y-%m-%d)
@@ -143,9 +106,9 @@ if [[ -f ".env" ]]; then
     fi
     
     if [[ -n "$PGADMIN_PASSWORD" ]]; then
-        check_mark "PGADMIN_PASSWORD configurada"
+        check_mark "PGLADMIN_PASSWORD configurada"
     else
-        x_mark "PGADMIN_PASSWORD no está configurada en .env"
+        x_mark "PGLADMIN_PASSWORD no está configurada en .env"
         ERRORS=$((ERRORS + 1))
     fi
 else
@@ -162,20 +125,32 @@ fi
 
 # Verificar directorios necesarios
 log "Verificando directorios..."
-DIRECTORIES=("postgres_data" "pgadmin_data" "init-scripts" "pgadmin-config")
+# Estos directorios son necesarios para:
+# - postgres_data: Almacena los datos de PostgreSQL (tablas, índices, configuraciones)
+# - pgladmin_data: Guarda las configuraciones y sesiones de pgAdmin
+# - init-scripts: Scripts SQL que se ejecutan al crear la BD por primera vez
+# - pgladmin-config: Configuraciones adicionales de pgAdmin (servers predefinidos, etc.)
+# 
+# NOTA: Las carpetas de datos (postgres_data, pgladmin_data, pgladmin-config) están en .gitignore
+# y se crean automáticamente al iniciar los contenedores
+DIRECTORIES=("postgres_data" "pgladmin_data" "init-scripts" "pgladmin-config")
 for dir in "${DIRECTORIES[@]}"; do
     if [[ -d "$dir" ]]; then
         check_mark "Directorio $dir existe"
     else
-        warning "Directorio $dir no existe (se creará automáticamente)"
-        WARNINGS=$((WARNINGS + 1))
+        if [[ "$dir" == "init-scripts" ]]; then
+            warning "Directorio $dir no existe (crear si necesitas scripts de inicialización)"
+            WARNINGS=$((WARNINGS + 1))
+        else
+            info "Directorio $dir no existe (se creará automáticamente al iniciar)"
+        fi
     fi
 done
 
 # Verificar puertos disponibles
 log "Verificando puertos..."
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
-PGADMIN_PORT=${PGADMIN_PORT:-5050}
+PGLADMIN_PORT=${PGLADMIN_PORT:-5050}
 
 if command -v lsof &> /dev/null; then
     if lsof -Pi :$POSTGRES_PORT -sTCP:LISTEN -t &> /dev/null; then
@@ -185,11 +160,11 @@ if command -v lsof &> /dev/null; then
         check_mark "Puerto $POSTGRES_PORT disponible"
     fi
     
-    if lsof -Pi :$PGADMIN_PORT -sTCP:LISTEN -t &> /dev/null; then
-        x_mark "Puerto $PGADMIN_PORT ya está en uso"
+    if lsof -Pi :$PGLADMIN_PORT -sTCP:LISTEN -t &> /dev/null; then
+        x_mark "Puerto $PGLADMIN_PORT ya está en uso"
         ERRORS=$((ERRORS + 1))
     else
-        check_mark "Puerto $PGADMIN_PORT disponible"
+        check_mark "Puerto $PGLADMIN_PORT disponible"
     fi
 elif command -v netstat &> /dev/null; then
     if netstat -tuln | grep -q ":$POSTGRES_PORT "; then
@@ -199,11 +174,11 @@ elif command -v netstat &> /dev/null; then
         check_mark "Puerto $POSTGRES_PORT disponible"
     fi
     
-    if netstat -tuln | grep -q ":$PGADMIN_PORT "; then
-        x_mark "Puerto $PGADMIN_PORT ya está en uso"
+    if netstat -tuln | grep -q ":$PGLADMIN_PORT "; then
+        x_mark "Puerto $PGLADMIN_PORT ya está en uso"
         ERRORS=$((ERRORS + 1))
     else
-        check_mark "Puerto $PGADMIN_PORT disponible"
+        check_mark "Puerto $PGLADMIN_PORT disponible"
     fi
 else
     warning "No se puede verificar disponibilidad de puertos (lsof/netstat no disponibles)"
