@@ -138,6 +138,152 @@ postgresql://username:password@localhost:5432/database_name
 psql -h localhost -p 5432 -U your_user -d your_database
 ```
 
+## Gestión de múltiples bases de datos
+
+### ⚠️ Importante: POSTGRES_DB es solo la base de datos inicial
+
+El parámetro `POSTGRES_DB` en el archivo `.env` **solo crea la base de datos inicial** cuando PostgreSQL se inicia por primera vez. Después puedes crear tantas bases de datos como necesites.
+
+```bash
+# En .env - Esta es SOLO la DB inicial
+POSTGRES_DB=mydatabase
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secure_password_123
+```
+
+### Crear bases de datos adicionales
+
+#### Método 1: Desde psql (línea de comandos)
+```bash
+# Conectar a PostgreSQL
+docker-compose exec postgres psql -U postgres
+
+# Crear nuevas bases de datos
+CREATE DATABASE app_production;
+CREATE DATABASE app_development;
+CREATE DATABASE analytics;
+CREATE DATABASE logs;
+
+# Crear usuarios específicos
+CREATE USER app_user WITH PASSWORD 'app_password';
+CREATE USER analytics_user WITH PASSWORD 'analytics_password';
+
+# Asignar permisos
+GRANT ALL PRIVILEGES ON DATABASE app_production TO app_user;
+GRANT ALL PRIVILEGES ON DATABASE app_development TO app_user;
+GRANT ALL PRIVILEGES ON DATABASE analytics TO analytics_user;
+
+# Listar todas las bases de datos
+\l
+
+# Salir
+\q
+```
+
+#### Método 2: Desde pgAdmin (interfaz web)
+1. Accede a http://localhost:5050
+2. Inicia sesión con las credenciales de `PGADMIN_EMAIL` y `PGLADMIN_PASSWORD`
+3. Click derecho en "Databases" → "Create" → "Database"
+4. Define nombre, owner, encoding, etc.
+5. Click "Save"
+
+#### Método 3: Scripts de inicialización automática
+Crear archivo `init-scripts/02-additional-databases.sql`:
+```sql
+-- init-scripts/02-additional-databases.sql
+-- Este script se ejecuta automáticamente al crear el contenedor por primera vez
+
+-- Crear bases de datos adicionales
+CREATE DATABASE app_production;
+CREATE DATABASE app_development;
+CREATE DATABASE testing;
+CREATE DATABASE analytics;
+
+-- Crear usuarios específicos
+CREATE USER app_user WITH PASSWORD 'app_secure_password';
+CREATE USER readonly_user WITH PASSWORD 'readonly_password';
+CREATE USER analytics_user WITH PASSWORD 'analytics_password';
+
+-- Asignar permisos
+GRANT ALL PRIVILEGES ON DATABASE app_production TO app_user;
+GRANT ALL PRIVILEGES ON DATABASE app_development TO app_user;
+GRANT ALL PRIVILEGES ON DATABASE testing TO app_user;
+GRANT ALL PRIVILEGES ON DATABASE analytics TO analytics_user;
+
+-- Permisos de solo lectura
+GRANT CONNECT ON DATABASE app_production TO readonly_user;
+GRANT USAGE ON SCHEMA public TO readonly_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;
+
+-- Configurar permisos por defecto para futuras tablas
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly_user;
+```
+
+### Conexiones a diferentes bases de datos
+
+Cada base de datos tiene su propia string de conexión:
+
+```bash
+# Base de datos inicial (definida en .env)
+postgresql://postgres:password@localhost:5432/mydatabase
+
+# Bases de datos adicionales con usuario principal
+postgresql://postgres:password@localhost:5432/app_production
+postgresql://postgres:password@localhost:5432/app_development
+postgresql://postgres:password@localhost:5432/analytics
+
+# Bases de datos con usuarios específicos
+postgresql://app_user:app_password@localhost:5432/app_production
+postgresql://analytics_user:analytics_password@localhost:5432/analytics
+postgresql://readonly_user:readonly_password@localhost:5432/app_production
+```
+
+### Comandos útiles para gestión de bases de datos
+
+```bash
+# Listar todas las bases de datos
+docker-compose exec postgres psql -U postgres -l
+
+# Conectar a una base de datos específica
+docker-compose exec postgres psql -U postgres -d app_production
+
+# Obtener tamaño de todas las bases de datos
+docker-compose exec postgres psql -U postgres -c "SELECT datname, pg_size_pretty(pg_database_size(datname)) as size FROM pg_database;"
+
+# Listar todos los usuarios
+docker-compose exec postgres psql -U postgres -c "\du"
+
+# Ver conexiones activas por base de datos
+docker-compose exec postgres psql -U postgres -c "SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;"
+```
+
+### Ejemplo práctico: Aplicación con múltiples entornos
+
+```sql
+-- Estructura típica para una aplicación
+CREATE DATABASE myapp_production;    -- Base de datos de producción
+CREATE DATABASE myapp_staging;       -- Base de datos de staging/pruebas
+CREATE DATABASE myapp_development;   -- Base de datos de desarrollo
+CREATE DATABASE myapp_testing;       -- Base de datos para tests automatizados
+
+-- Usuarios especializados
+CREATE USER app_prod_user WITH PASSWORD 'prod_secure_password';
+CREATE USER app_dev_user WITH PASSWORD 'dev_password';
+CREATE USER backup_user WITH PASSWORD 'backup_password';
+
+-- Permisos de producción (más restrictivos)
+GRANT CONNECT ON DATABASE myapp_production TO app_prod_user;
+GRANT ALL PRIVILEGES ON DATABASE myapp_production TO app_prod_user;
+
+-- Permisos de desarrollo (más permisivos)
+GRANT ALL PRIVILEGES ON DATABASE myapp_development TO app_dev_user;
+GRANT ALL PRIVILEGES ON DATABASE myapp_staging TO app_dev_user;
+GRANT ALL PRIVILEGES ON DATABASE myapp_testing TO app_dev_user;
+
+-- Usuario para backups (solo lectura)
+GRANT CONNECT ON DATABASE myapp_production TO backup_user;
+```
+
 ## Scripts de inicialización
 
 Puedes agregar scripts SQL o shell en el directorio `init-scripts/` que se ejecutarán automáticamente al crear la base de datos por primera vez:
@@ -282,3 +428,4 @@ sudo fail2ban-client status postgresql
 - [Documentación de pgAdmin](https://www.pgadmin.org/docs/)
 - [Docker Hub - PostgreSQL](https://hub.docker.com/_/postgres)
 - [Docker Hub - pgAdmin](https://hub.docker.com/r/dpage/pgadmin4/)
+

@@ -31,6 +31,9 @@ info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
+# Variable global para comando de Docker Compose
+COMPOSE_CMD=""
+
 # Verificar dependencias
 check_dependencies() {
     log "Verificando dependencias..."
@@ -40,7 +43,15 @@ check_dependencies() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
+    # Verificar Docker Compose (nuevo comando integrado o legacy standalone)
+    if docker compose version &> /dev/null; then
+        COMPOSE_CMD="docker compose"
+        log "Docker Compose integrado detectado"
+    elif command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
+        log "Docker Compose standalone detectado"
+        warning "Se recomienda usar 'docker compose' en lugar de 'docker-compose'"
+    else
         error "Docker Compose no está instalado"
         exit 1
     fi
@@ -160,10 +171,10 @@ start_services() {
     log "Iniciando servicios PostgreSQL y pgAdmin..."
     
     # Bajar servicios anteriores por si estaban corriendo
-    docker-compose down 2>/dev/null
+    $COMPOSE_CMD down 2>/dev/null
     
     # Iniciar servicios
-    docker-compose up -d
+    $COMPOSE_CMD up -d
     
     if [[ $? -eq 0 ]]; then
         log "Servicios iniciados correctamente"
@@ -180,7 +191,7 @@ wait_for_services() {
     # Esperar PostgreSQL
     echo -n "Esperando PostgreSQL"
     for i in {1..30}; do
-        if docker-compose exec -T postgres pg_isready -U ${POSTGRES_USER:-postgres} &>/dev/null; then
+        if $COMPOSE_CMD exec -T postgres pg_isready -U ${POSTGRES_USER:-postgres} &>/dev/null; then
             echo " ✓"
             break
         fi
@@ -232,10 +243,10 @@ show_connection_info() {
     echo ""
     
     info "Comandos útiles:"
-    echo "  Ver logs: docker-compose logs -f"
-    echo "  Detener: docker-compose down"
-    echo "  Reiniciar: docker-compose restart"
-    echo "  Estado: docker-compose ps"
+    echo "  Ver logs: $COMPOSE_CMD logs -f"
+    echo "  Detener: $COMPOSE_CMD down"
+    echo "  Reiniciar: $COMPOSE_CMD restart"
+    echo "  Estado: $COMPOSE_CMD ps"
     
     if command -v /usr/local/bin/postgresql-monitor.sh &> /dev/null; then
         echo "  Monitoreo: sudo /usr/local/bin/postgresql-monitor.sh"
@@ -243,7 +254,7 @@ show_connection_info() {
     
     echo ""
     log "Estado actual de los contenedores:"
-    docker-compose ps
+    $COMPOSE_CMD ps
 }
 
 # Función principal
