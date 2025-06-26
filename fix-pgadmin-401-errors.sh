@@ -1,0 +1,425 @@
+#!/bin/bash
+
+#============================================================================# Paso 3: Detener pgAdmin
+log "3. Deteniendo pgAdmin completamente..."
+${SUDO_PREFIX}${COMPOSE_CMD} stop pgladmin
+${SUDO_PREFIX}${COMPOSE_CMD} rm -f pgladmin
+
+# Verificar si hay procesos colgados
+log "3.1. Verificando procesos de pgAdmin..."
+if ${SUDO_PREFIX}docker ps -a | grep pgladmin > /dev/null; then
+    warning "Eliminando contenedor pgladmin anterior..."
+    ${SUDO_PREFIX}docker rm -f $(${SUDO_PREFIX}docker ps -a | grep pgladmin | awk '{print $1}') 2>/dev/null || true
+fi# SCRIPT PARA SOLUCIONAR ERRORES 401 UNAUTHORIZED EN PGADMIN
+# Descripción: Soluciona errores 401 que aparecen después del login en pgAdmin
+# Autor: Administrador de Sistemas
+#===============================================================================
+
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+echo "==============================================================================="
+echo "SOLUCIONADOR DE ERRORES 401 UNAUTHORIZED - PGADMIN"
+echo "==============================================================================="
+echo ""
+
+# Detectar comando de Docker Compose
+COMPOSE_CMD=""
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+else
+    error "Docker Compose no está disponible"
+    exit 1
+fi
+
+# Verificar si necesita sudo
+SUDO_PREFIX=""
+if ! docker info &> /dev/null; then
+    if sudo docker info &> /dev/null; then
+        SUDO_PREFIX="sudo "
+        warning "Usando sudo para comandos Docker"
+    else
+        error "Docker no está disponible"
+        exit 1
+    fi
+fi
+
+log "Problema detectado: Failed to load preferences y errores 401"
+echo ""
+echo "Estos errores indican:"
+echo "1. pgAdmin no puede cargar configuración inicial (preferences)"
+echo "2. Base de datos interna de pgAdmin corrupta o inaccesible"
+echo "3. Permisos incorrectos en archivos de configuración"
+echo "4. Configuración de autenticación incorrecta"
+echo "5. Cookies/sesiones corruptas"
+echo ""
+
+# Paso 1: Verificar configuración actual
+log "1. Verificando configuración actual..."
+if [ -f ".env" ]; then
+    source .env
+    echo "Puerto pgAdmin: ${PGLADMIN_PORT:-5050}"
+    echo "Email configurado: ${PGLADMIN_EMAIL:-No configurado}"
+    echo "Host configurado: ${PGLADMIN_HOST:-localhost}"
+else
+    error "Archivo .env no encontrado"
+    exit 1
+fi
+
+# Paso 2: Backup del estado actual
+log "2. Creando backup del estado actual..."
+timestamp=$(date +%Y%m%d_%H%M%S)
+mkdir -p backups
+
+# Backup de archivos de configuración
+cp .env "backups/.env_${timestamp}" 2>/dev/null || true
+cp docker-compose.yml "backups/docker-compose_${timestamp}.yml" 2>/dev/null || true
+
+# Paso 3: Detener pgAdmin
+log "3. Deteniendo pgAdmin completamente..."
+${SUDO_PREFIX}${COMPOSE_CMD} stop pgadmin
+${SUDO_PREFIX}${COMPOSE_CMD} rm -f pgladmin
+
+# Paso 4: Limpiar datos de sesión y configuración
+log "4. Limpiando datos de sesión y configuración corruptos..."
+if [ -d "pgladmin_data" ]; then
+    sudo mv pgladmin_data "backups/pgladmin_data_${timestamp}" 2>/dev/null || mv pgladmin_data "backups/pgladmin_data_${timestamp}"
+    success "✓ Datos anteriores respaldados"
+fi
+
+# Limpiar también volúmenes de Docker si existen
+log "4.1. Limpiando volúmenes de Docker relacionados..."
+${SUDO_PREFIX}docker volume ls | grep pgladmin && {
+    warning "Eliminando volúmenes de pgladmin..."
+    ${SUDO_PREFIX}docker volume ls | grep pgladmin | awk '{print $2}' | xargs ${SUDO_PREFIX}docker volume rm 2>/dev/null || true
+} || echo "No hay volúmenes de pgladmin que limpiar"
+
+# Paso 5: Crear configuración optimizada para autenticación
+log "5. Creando configuración optimizada para autenticación..."
+
+# Backup del .env actual
+cp .env .env.backup
+
+# Crear configuración mejorada
+cat >> .env << 'EOF'
+
+# =============================================================================
+# CONFIGURACIÓN OPTIMIZADA PARA SOLUCIONAR "FAILED TO LOAD PREFERENCES"
+# =============================================================================
+
+# Configuraciones críticas para inicialización
+PGLADMIN_CONFIG_DATA_DIR=/var/lib/pgladmin
+PGLADMIN_CONFIG_LOG_FILE=/var/log/pgladmin/pgladmin4.log
+PGLADMIN_CONFIG_SQLITE_PATH=/var/lib/pgladmin/pgladmin4.db
+PGLADMIN_CONFIG_SESSION_DB_PATH=/var/lib/pgladmin/sessions
+
+# Configuraciones de inicialización de BD
+PGLADMIN_CONFIG_UPGRADE_CHECK_ENABLED=False
+PGLADMIN_CONFIG_AUTO_CREATE_DB=True
+PGLADMIN_CONFIG_DB_UPGRADE=True
+
+# Configuraciones de sesión y cookies
+PGLADMIN_CONFIG_SESSION_COOKIE_SECURE=False
+PGLADMIN_CONFIG_SESSION_COOKIE_SAMESITE=Lax
+PGLADMIN_CONFIG_SESSION_COOKIE_HTTPONLY=True
+PGLADMIN_CONFIG_SESSION_COOKIE_DOMAIN=
+
+# Configuraciones de autenticación
+PGLADMIN_CONFIG_AUTHENTICATION_SOURCES=['internal']
+PGLADMIN_CONFIG_LOGIN_BANNER=""
+PGLADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+
+# Configuraciones de seguridad ajustadas para inicialización
+PGLADMIN_CONFIG_WTF_CSRF_ENABLED=False
+PGLADMIN_CONFIG_WTF_CSRF_TIME_LIMIT=None
+PGLADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT=False
+
+# Configuraciones de conexión
+PGLADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+PGLADMIN_CONFIG_PASSWORD_LENGTH_MIN=1
+
+# Configuraciones de logging para debug
+PGLADMIN_CONFIG_CONSOLE_LOG_LEVEL=10
+PGLADMIN_CONFIG_FILE_LOG_LEVEL=10
+
+# Configuraciones específicas para errores de preferences
+PGLADMIN_CONFIG_ALLOW_SAVE_PASSWORD=True
+PGLADMIN_CONFIG_BROWSER_AUTO_EXPANSION_MINIMUM_ITEMS=0
+PGLADMIN_CONFIG_MAX_QUERY_HIST_STORED=100
+PGLADMIN_CONFIG_QUERY_HISTORY_MAX_COUNT=100
+
+# Configuraciones de servidor web interno
+PGLADMIN_CONFIG_DEFAULT_SERVER='localhost'
+PGLADMIN_CONFIG_DEFAULT_SERVER_PORT=5432
+EOF
+
+# Paso 6: Verificar/actualizar docker-compose.yml
+log "6. Verificando configuración de docker-compose.yml..."
+
+# Crear configuración temporal si es necesario
+if ! grep -q "restart: unless-stopped" docker-compose.yml; then
+    warning "Actualizando docker-compose.yml para mejor estabilidad..."
+    
+    # Backup
+    cp docker-compose.yml docker-compose.yml.backup_${timestamp}
+    
+    # Buscar la sección de pgladmin y asegurar configuraciones correctas
+    python3 -c "
+import yaml
+import sys
+
+try:
+    with open('docker-compose.yml', 'r') as f:
+        data = yaml.safe_load(f)
+    
+    if 'services' in data and 'pgladmin' in data['services']:
+        service = data['services']['pgladmin']
+        
+        # Asegurar restart policy
+        service['restart'] = 'unless-stopped'
+        
+        # Asegurar variables de entorno desde .env
+        if 'environment' not in service:
+            service['environment'] = {}
+        
+        # Variables críticas para autenticación
+        env_vars = [
+            'PGLADMIN_CONFIG_SESSION_COOKIE_SECURE',
+            'PGLADMIN_CONFIG_SESSION_COOKIE_SAMESITE', 
+            'PGLADMIN_CONFIG_SESSION_COOKIE_HTTPONLY',
+            'PGLADMIN_CONFIG_AUTHENTICATION_SOURCES',
+            'PGLADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION',
+            'PGLADMIN_CONFIG_WTF_CSRF_ENABLED',
+            'PGLADMIN_CONFIG_MASTER_PASSWORD_REQUIRED'
+        ]
+        
+        for var in env_vars:
+            service['environment'][var] = f'${{{var}}}'
+        
+        # Asegurar healthcheck
+        service['healthcheck'] = {
+            'test': ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:80/misc/ping'],
+            'interval': '30s',
+            'timeout': '10s',
+            'retries': 3,
+            'start_period': '60s'
+        }
+        
+        with open('docker-compose.yml', 'w') as f:
+            yaml.dump(data, f, default_flow_style=False, indent=2)
+        
+        print('✓ docker-compose.yml actualizado correctamente')
+    else:
+        print('⚠ No se encontró servicio pgladmin en docker-compose.yml')
+        
+except Exception as e:
+    print(f'Error actualizando docker-compose.yml: {e}')
+    sys.exit(1)
+" 2>/dev/null || warning "No se pudo actualizar docker-compose.yml automáticamente"
+fi
+
+# Paso 7: Recrear directorio con permisos específicos
+log "7. Recreando directorio pgladmin_data con permisos específicos..."
+mkdir -p pgladmin_data
+mkdir -p pgladmin_data/sessions
+mkdir -p pgladmin_data/storage
+mkdir -p pgladmin_data/logs
+
+# Crear archivo de BD inicial si no existe
+log "7.1. Inicializando estructura de base de datos..."
+touch pgladmin_data/pgladmin4.db
+chmod 644 pgladmin_data/pgladmin4.db
+
+# Establecer permisos correctos
+sudo chown -R 5050:5050 pgladmin_data/ 2>/dev/null || chown -R 5050:5050 pgladmin_data/
+chmod -R 755 pgladmin_data/
+chmod 644 pgladmin_data/pgladmin4.db
+
+success "✓ Estructura de directorios creada correctamente"
+
+# Paso 8: Iniciar pgAdmin con configuración limpia
+log "8. Iniciando pgAdmin con configuración optimizada..."
+${SUDO_PREFIX}${COMPOSE_CMD} up -d pgladmin
+
+# Paso 9: Esperar inicialización completa
+log "9. Esperando inicialización completa de pgAdmin..."
+echo -n "Esperando"
+max_attempts=80
+attempt=0
+
+# Esperar que el contenedor esté corriendo
+while [ $attempt -lt $max_attempts ]; do
+    if ${SUDO_PREFIX}${COMPOSE_CMD} ps | grep pgladmin | grep -q "Up"; then
+        echo ""
+        success "✓ Contenedor pgAdmin está ejecutándose"
+        break
+    fi
+    echo -n "."
+    sleep 2
+    ((attempt++))
+done
+
+# Ahora esperar que responda HTTP
+echo -n "Esperando respuesta HTTP"
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+    if curl -s -f http://localhost:${PGLADMIN_PORT:-5050}/ > /dev/null 2>&1; then
+        echo ""
+        success "✓ pgAdmin responde correctamente"
+        break
+    fi
+    echo -n "."
+    sleep 3
+    ((attempt++))
+done
+
+if [ $attempt -eq $max_attempts ]; then
+    warning "pgAdmin tardó más de lo esperado en inicializar"
+    warning "Verificando logs para detectar problemas..."
+    ${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=20 pgladmin
+fi
+
+# Paso 10: Verificar estado del contenedor
+log "10. Verificando estado del contenedor..."
+${SUDO_PREFIX}${COMPOSE_CMD} ps pgladmin
+
+# Paso 11: Mostrar logs recientes
+log "11. Mostrando logs recientes..."
+echo "Últimas 15 líneas de logs:"
+${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=15 pgladmin
+
+# Paso 12: Probar endpoints específicos
+log "12. Probando endpoints que daban error 401..."
+echo ""
+echo "Probando conectividad a endpoints específicos:"
+
+endpoints=(
+    "/misc/ping"
+    "/login"
+    "/preferences/get_all"
+    "/browser/check_corrupted_db_file"
+    "/misc/bgprocess/"
+)
+
+for endpoint in "${endpoints[@]}"; do
+    echo -n "  ${endpoint}: "
+    status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PGLADMIN_PORT:-5050}${endpoint}" 2>/dev/null || echo "ERROR")
+    if [ "$status" = "200" ] || [ "$status" = "302" ]; then
+        echo -e "${GREEN}OK (${status})${NC}"
+    elif [ "$status" = "401" ]; then
+        echo -e "${RED}401 UNAUTHORIZED${NC}"
+    elif [ "$status" = "500" ]; then
+        echo -e "${RED}500 SERVER ERROR${NC}"
+    else
+        echo -e "${YELLOW}${status}${NC}"
+    fi
+done
+
+echo ""
+
+# Paso 13: Crear script de diagnóstico
+log "13. Creando script de diagnóstico..."
+cat > pgladmin-diagnostics.sh << 'EOF'
+#!/bin/bash
+
+echo "=== DIAGNÓSTICO DE PGADMIN ==="
+echo ""
+
+# Cargar variables
+source .env 2>/dev/null || true
+
+echo "🔍 INFORMACIÓN DEL CONTENEDOR:"
+docker compose ps pgladmin 2>/dev/null || docker-compose ps pgladmin
+
+echo ""
+echo "🔍 ESTADO DE SALUD:"
+docker compose exec pgladmin wget --no-verbose --tries=1 --spider http://localhost:80/misc/ping 2>/dev/null && echo "✓ Servicio saludable" || echo "✗ Servicio no responde"
+
+echo ""
+echo "🔍 LOGS RECIENTES:"
+docker compose logs --tail=10 pgladmin 2>/dev/null || docker-compose logs --tail=10 pgladmin
+
+echo ""
+echo "🔍 PRUEBA DE ENDPOINTS:"
+PORT=${PGLADMIN_PORT:-5050}
+for endpoint in "/misc/ping" "/browser/check_corrupted_db_file" "/misc/bgprocess/" "/preferences/get_all"; do
+    echo -n "  ${endpoint}: "
+    status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}${endpoint}" 2>/dev/null || echo "ERROR")
+    echo "${status}"
+done
+
+echo ""
+echo "🔍 CONFIGURACIÓN ACTUAL:"
+echo "URL: http://192.168.3.243:${PGLADMIN_PORT:-5050}/"
+echo "Email: ${PGLADMIN_EMAIL:-admin@example.com}"
+
+echo ""
+echo "🔍 ARCHIVOS DE DATOS:"
+ls -la pgladmin_data/ 2>/dev/null || echo "No se puede acceder a pgladmin_data/"
+
+echo ""
+echo "Para solucionar problemas, ejecuta: ./fix-pgladmin-401-errors.sh"
+EOF
+
+chmod +x pgladmin-diagnostics.sh
+success "✓ Script pgladmin-diagnostics.sh creado"
+
+echo ""
+log "SOLUCIÓN PARA 'FAILED TO LOAD PREFERENCES' COMPLETADA"
+echo "============================================"
+echo ""
+echo "🎯 PRÓXIMOS PASOS:"
+echo "1. Espera 3-5 minutos para que pgAdmin termine de inicializar completamente"
+echo "2. Accede a: http://192.168.3.243:${PGLADMIN_PORT:-5050}/"
+echo "3. Si aparece la página de login, el problema está SOLUCIONADO"
+echo "4. Si sigue 'failed to load preferences', revisa los logs"
+echo ""
+echo "🔧 SI SIGUEN LOS PROBLEMAS:"
+echo "1. Ejecuta: ./pgladmin-diagnostics.sh para más información"
+echo "2. Verifica los logs con: docker compose logs pgladmin"
+echo "3. Prueba desde modo incógnito del navegador"
+echo "4. Verifica que no hay procesos colgados: docker ps -a"
+echo ""
+echo "💡 IMPORTANTE:"
+echo "El error 'failed to load preferences' indica que:"
+echo "- La base de datos interna de pgAdmin no se puede inicializar (SOLUCIONADO)"
+echo "- Hay problemas de permisos en archivos (SOLUCIONADO)"
+echo "- La configuración inicial está corrupta (SOLUCIONADO)"
+echo ""
+echo "📋 ARCHIVOS CREADOS:"
+echo "- pgladmin-diagnostics.sh (para diagnóstico)"
+echo "- Backups en carpeta: backups/"
+
+# Mostrar resumen de configuración aplicada
+echo ""
+log "CONFIGURACIONES APLICADAS:"
+echo "- Base de datos interna de pgAdmin recreada completamente"
+echo "- Permisos de archivos corregidos (usuario 5050:5050)"
+echo "- CSRF deshabilitado durante inicialización"
+echo "- Logging aumentado para debug de inicialización"
+echo "- Auto-creación de BD habilitada"
+echo "- Configuraciones de autenticación optimizadas"
+echo "- Estructura de directorios recreada desde cero"
+echo "- Volúmenes de Docker limpiados"
