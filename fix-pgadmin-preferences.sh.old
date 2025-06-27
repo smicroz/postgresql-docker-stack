@@ -1,16 +1,5 @@
 #!/bin/bash
-
-#============================================================================# Paso 3: Detener pgAdmin
-log "3. Deteniendo pgAdmin completamente..."
-${SUDO_PREFIX}${COMPOSE_CMD} stop pgladmin
-${SUDO_PREFIX}${COMPOSE_CMD} rm -f pgladmin
-
-# Verificar si hay procesos colgados
-log "3.1. Verificando procesos de pgAdmin..."
-if ${SUDO_PREFIX}docker ps -a | grep pgladmin > /dev/null; then
-    warning "Eliminando contenedor pgladmin anterior..."
-    ${SUDO_PREFIX}docker rm -f $(${SUDO_PREFIX}docker ps -a | grep pgladmin | awk '{print $1}') 2>/dev/null || true
-fi# SCRIPT PARA SOLUCIONAR ERRORES 401 UNAUTHORIZED EN PGADMIN
+# SCRIPT PARA SOLUCIONAR ERRORES 401 UNAUTHORIZED EN PGADMIN
 # Descripción: Soluciona errores 401 que aparecen después del login en pgAdmin
 # Autor: Administrador de Sistemas
 #===============================================================================
