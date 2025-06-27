@@ -160,24 +160,24 @@ setup_pgadmin_robust() {
     log "Configurando pgAdmin con configuración robusta..."
     
     # Limpiar instalación anterior si existe
-    if [[ -d "pgladmin_data" ]]; then
+    if [[ -d "pgadmin_data" ]]; then
         warning "Limpiando datos anteriores de pgAdmin para evitar conflictos..."
-        rm -rf pgladmin_data
+        rm -rf pgadmin_data
     fi
     
     # Crear estructura de directorios optimizada
     log "Creando estructura optimizada de directorios para pgAdmin..."
-    mkdir -p pgladmin_data/{sessions,storage,logs}
+    mkdir -p pgadmin_data/{sessions,storage,logs}
     
     # Crear base de datos inicial limpia
-    touch pgladmin_data/pgladmin4.db
-    chmod 644 pgladmin_data/pgladmin4.db
+    touch pgadmin_data/pgadmin4.db
+    chmod 644 pgadmin_data/pgadmin4.db
     
     # Configurar permisos correctos
     if command -v chown &> /dev/null; then
-        chown -R 5050:5050 pgladmin_data 2>/dev/null || warning "No se pudieron configurar permisos para pgladmin_data"
+        chown -R 5050:5050 pgadmin_data 2>/dev/null || warning "No se pudieron configurar permisos para pgadmin_data"
     fi
-    chmod -R 755 pgladmin_data
+    chmod -R 755 pgadmin_data
     
     # Crear directorio de configuración si no existe
     if [[ ! -d "pgladmin-config" ]]; then
@@ -235,7 +235,7 @@ PGLADMIN_CONFIG_PASSWORD_LENGTH_MIN=1
 PGLADMIN_CONFIG_CONSOLE_LOG_LEVEL=20
 PGLADMIN_CONFIG_FILE_LOG_LEVEL=20
 
-# Configuraciones específicas para prevenir errores 401
+# Configuraciones específicas para prevenir errores de preferences
 PGLADMIN_CONFIG_ALLOW_SAVE_PASSWORD=True
 PGLADMIN_CONFIG_BROWSER_AUTO_EXPANSION_MINIMUM_ITEMS=0
 PGLADMIN_CONFIG_MAX_QUERY_HIST_STORED=100
@@ -290,7 +290,7 @@ wait_for_services() {
     pgadmin_ready=false
     for i in {1..60}; do  # Aumentar tiempo de espera para pgAdmin
         # Verificar que el contenedor esté corriendo
-        if ! $COMPOSE_CMD ps pgladmin | grep -q "Up"; then
+        if ! $COMPOSE_CMD ps pgadmin | grep -q "Up"; then
             echo -n "."
             sleep 2
             continue
@@ -331,13 +331,13 @@ validate_pgadmin_setup() {
     log "Validando configuración de pgAdmin..."
     
     # Verificar que el contenedor esté corriendo
-    if ! $COMPOSE_CMD ps pgladmin | grep -q "Up"; then
+    if ! $COMPOSE_CMD ps pgadmin | grep -q "Up"; then
         warning "El contenedor de pgAdmin no está corriendo correctamente"
         return 1
     fi
     
     # Verificar logs para errores críticos
-    local logs=$($COMPOSE_CMD logs --tail=10 pgladmin 2>/dev/null)
+    local logs=$($COMPOSE_CMD logs --tail=10 pgadmin 2>/dev/null)
     
     if echo "$logs" | grep -q -i "error\|failed\|exception"; then
         warning "Se detectaron posibles errores en pgAdmin:"
@@ -400,7 +400,7 @@ show_connection_info() {
     info "Troubleshooting pgAdmin:"
     echo "  Si hay errores de 'preferences': ./fix-pgladmin-preferences.sh"
     echo "  Limpiar cache del navegador: Ctrl+F5 o modo incógnito"
-    echo "  Ver logs de pgAdmin: $COMPOSE_CMD logs pgladmin"
+    echo "  Ver logs de pgAdmin: $COMPOSE_CMD logs pgadmin"
     
     echo ""
     log "Estado actual de los contenedores:"
@@ -441,7 +441,7 @@ elif command -v docker-compose &> /dev/null; then
 fi
 
 echo "🔍 Estado del contenedor:"
-$COMPOSE_CMD ps | grep pgladmin
+$COMPOSE_CMD ps | grep pgadmin
 
 echo ""
 echo "🌐 URL de acceso: http://localhost:${PGLADMIN_PORT:-5050}/"

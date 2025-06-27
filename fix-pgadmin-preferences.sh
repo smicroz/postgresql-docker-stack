@@ -74,7 +74,7 @@ fi
 
 # Paso 2: Verificar estado del contenedor
 log "2. Verificando estado del contenedor..."
-container_status=$(${SUDO_PREFIX}${COMPOSE_CMD} ps pgladmin 2>/dev/null | grep pgladmin | awk '{print $3}' || echo "No encontrado")
+container_status=$(${SUDO_PREFIX}${COMPOSE_CMD} ps pgadmin 2>/dev/null | grep pgadmin | awk '{print $3}' || echo "No encontrado")
 echo "Estado actual: $container_status"
 
 if [[ "$container_status" != "Up" ]] && [[ "$container_status" != "running" ]]; then
@@ -83,7 +83,7 @@ fi
 
 # Paso 3: Verificar logs para identificar problemas específicos
 log "3. Analizando logs para identificar problemas..."
-logs=$(${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=20 pgladmin 2>/dev/null)
+logs=$(${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=20 pgadmin 2>/dev/null)
 
 # Identificar tipo de problema
 problem_type="unknown"
@@ -111,21 +111,21 @@ case $problem_type in
         log "Solucionando problemas de base de datos y preferencias..."
         
         # Detener contenedor
-        ${SUDO_PREFIX}${COMPOSE_CMD} stop pgladmin
+        ${SUDO_PREFIX}${COMPOSE_CMD} stop pgadmin
         
         # Backup y limpieza
-        if [ -d "pgladmin_data" ]; then
+        if [ -d "pgadmin_data" ]; then
             timestamp=$(date +%Y%m%d_%H%M%S)
-            mv pgladmin_data "pgladmin_data_backup_${timestamp}"
-            success "Backup creado: pgladmin_data_backup_${timestamp}"
+            mv pgadmin_data "pgadmin_data_backup_${timestamp}"
+            success "Backup creado: pgadmin_data_backup_${timestamp}"
         fi
         
         # Recrear estructura limpia
-        mkdir -p pgladmin_data/{sessions,storage,logs}
-        touch pgladmin_data/pgladmin4.db
-        chmod 644 pgladmin_data/pgladmin4.db
-        sudo chown -R 5050:5050 pgladmin_data/ 2>/dev/null || chown -R 5050:5050 pgladmin_data/
-        chmod -R 755 pgladmin_data/
+        mkdir -p pgadmin_data/{sessions,storage,logs}
+        touch pgadmin_data/pgadmin4.db
+        chmod 644 pgadmin_data/pgadmin4.db
+        sudo chown -R 5050:5050 pgadmin_data/ 2>/dev/null || chown -R 5050:5050 pgadmin_data/
+        chmod -R 755 pgadmin_data/
         
         success "Estructura de datos recreada"
         ;;
@@ -134,11 +134,11 @@ case $problem_type in
         log "Solucionando problemas de CSRF y autenticación..."
         
         # Solo reiniciar y limpiar sesiones
-        ${SUDO_PREFIX}${COMPOSE_CMD} restart pgladmin
+        ${SUDO_PREFIX}${COMPOSE_CMD} restart pgadmin
         sleep 5
         
         # Limpiar sesiones dentro del contenedor
-        ${SUDO_PREFIX}${COMPOSE_CMD} exec pgladmin sh -c "rm -f /var/lib/pgladmin/sessions/* 2>/dev/null || true"
+        ${SUDO_PREFIX}${COMPOSE_CMD} exec pgadmin sh -c "rm -f /var/lib/pgadmin/sessions/* 2>/dev/null || true"
         
         success "Sesiones limpiadas"
         ;;
@@ -147,12 +147,12 @@ case $problem_type in
         log "Corrigiendo permisos..."
         
         # Detener contenedor
-        ${SUDO_PREFIX}${COMPOSE_CMD} stop pgladmin
+        ${SUDO_PREFIX}${COMPOSE_CMD} stop pgadmin
         
         # Corregir permisos
-        if [ -d "pgladmin_data" ]; then
-            sudo chown -R 5050:5050 pgladmin_data/ 2>/dev/null || chown -R 5050:5050 pgladmin_data/
-            chmod -R 755 pgladmin_data/
+        if [ -d "pgadmin_data" ]; then
+            sudo chown -R 5050:5050 pgadmin_data/ 2>/dev/null || chown -R 5050:5050 pgadmin_data/
+            chmod -R 755 pgadmin_data/
             success "Permisos corregidos"
         fi
         ;;
@@ -177,7 +177,7 @@ fi
 
 # Paso 6: Iniciar pgAdmin
 log "6. Iniciando pgAdmin..."
-${SUDO_PREFIX}${COMPOSE_CMD} up -d pgladmin
+${SUDO_PREFIX}${COMPOSE_CMD} up -d pgadmin
 
 # Paso 7: Esperar inicialización con timeout extendido
 log "7. Esperando inicialización completa (puede tomar 2-3 minutos)..."
@@ -186,7 +186,7 @@ pgladmin_ready=false
 
 for i in {1..80}; do
     # Verificar que el contenedor esté corriendo
-    if ${SUDO_PREFIX}${COMPOSE_CMD} ps pgladmin | grep -q "Up"; then
+    if ${SUDO_PREFIX}${COMPOSE_CMD} ps pgadmin | grep -q "Up"; then
         # Verificar respuesta HTTP
         if command -v curl &> /dev/null; then
             status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:${PGLADMIN_PORT:-5050}/" 2>/dev/null || echo "ERROR")
@@ -213,7 +213,7 @@ if [[ "$pgladmin_ready" == "true" ]]; then
     success "✓ pgAdmin inicializado correctamente"
     
     # Verificar que no hay errores en logs
-    recent_logs=$(${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=5 pgladmin 2>/dev/null)
+    recent_logs=$(${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=5 pgadmin 2>/dev/null)
     if echo "$recent_logs" | grep -q -i "error\|failed\|exception"; then
         warning "Se detectaron algunos errores en logs recientes:"
         echo "$recent_logs" | grep -i "error\|failed\|exception" | tail -2
@@ -223,7 +223,7 @@ if [[ "$pgladmin_ready" == "true" ]]; then
 else
     warning "pgAdmin puede no estar completamente listo"
     log "Mostrando logs recientes:"
-    ${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=10 pgladmin
+    ${SUDO_PREFIX}${COMPOSE_CMD} logs --tail=10 pgadmin
 fi
 
 echo ""
@@ -246,8 +246,8 @@ echo "• Limpia cookies específicamente para este sitio"
 echo ""
 echo "🔍 VERIFICAR CONFIGURACIÓN:"
 echo "• Estado: ${COMPOSE_CMD} ps"
-echo "• Logs: ${COMPOSE_CMD} logs pgladmin"
-echo "• Reiniciar: ${COMPOSE_CMD} restart pgladmin"
+echo "• Logs: ${COMPOSE_CMD} logs pgadmin"
+echo "• Reiniciar: ${COMPOSE_CMD} restart pgadmin"
 echo ""
 echo "📱 LIMPIAR COOKIES ESPECÍFICAMENTE:"
 echo "• Chrome: F12 > Application > Storage > Clear site data"

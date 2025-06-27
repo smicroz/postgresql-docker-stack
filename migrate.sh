@@ -71,13 +71,9 @@ if [ -d "postgres_data" ]; then
     echo "✓ postgres_data encontrado"
 fi
 
-if [ -d "pgladmin_data" ]; then
-    data_dirs="$data_dirs pgladmin_data"
-    echo "✓ pgladmin_data encontrado"
-fi
-
-if [ -d "pgladmin_data" ]; then
-    echo "⚠ pgladmin_data encontrado (naming inconsistente)"
+if [ -d "pgadmin_data" ]; then
+    data_dirs="$data_dirs pgadmin_data"
+    echo "✓ pgadmin_data encontrado"
 fi
 
 echo ""
@@ -148,7 +144,7 @@ case $choice in
         
         # Limpiar volúmenes relacionados
         log "Limpiando volúmenes Docker relacionados con PostgreSQL..."
-        postgres_volumes=$(${SUDO_PREFIX}docker volume ls -q | grep -E "(postgres|pgladmin)" || true)
+        postgres_volumes=$(${SUDO_PREFIX}docker volume ls -q | grep -E "(postgres|pgadmin)" || true)
         if [ -n "$postgres_volumes" ]; then
             echo "$postgres_volumes" | xargs ${SUDO_PREFIX}docker volume rm 2>/dev/null || true
             success "✓ Volúmenes limpiados"
@@ -172,7 +168,7 @@ case $choice in
             ${SUDO_PREFIX}${COMPOSE_CMD} down 2>/dev/null || true
             
             log "Eliminando todos los datos..."
-            rm -rf postgres_data pgladmin_data pgladmin_data 2>/dev/null || true
+            rm -rf postgres_data pgadmin_data pgadmin_data 2>/dev/null || true
             
             log "Limpiando volúmenes Docker..."
             ${SUDO_PREFIX}docker volume prune -f 2>/dev/null || true
@@ -204,7 +200,7 @@ case $choice in
         echo ""
         
         echo "🐳 VOLÚMENES DOCKER:"
-        ${SUDO_PREFIX}docker volume ls | grep -E "(postgres|pgladmin)" || echo "No se encontraron volúmenes relacionados"
+        ${SUDO_PREFIX}docker volume ls | grep -E "(postgres|pgadmin)" || echo "No se encontraron volúmenes relacionados"
         echo ""
         
         echo "📁 ARCHIVOS DE CONFIGURACIÓN:"

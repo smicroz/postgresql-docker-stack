@@ -54,30 +54,38 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  pgladmin:
-    image: dpage/pgladmin4:latest
-    container_name: pgladmin_web
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin_web
     restart: unless-stopped
     environment:
-      PGLADMIN_DEFAULT_EMAIL: ${PGLADMIN_EMAIL:-admin@example.com}
-      PGLADMIN_DEFAULT_PASSWORD: ${PGLADMIN_PASSWORD}
-      PGLADMIN_CONFIG_SERVER_MODE: 'False'
-      PGLADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-      PGLADMIN_CONFIG_LOGIN_BANNER: '"PostgreSQL Administration - Authorized Access Only"'
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_CONFIG_LOGIN_BANNER: '"PostgreSQL Administration - Authorized Access Only"'
       # Configuraciones optimizadas para prevenir errores comunes
-      PGLADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
-      PGLADMIN_CONFIG_SESSION_COOKIE_SECURE: 'False'
-      PGLADMIN_CONFIG_SESSION_COOKIE_HTTPONLY: 'True'
-      PGLADMIN_CONFIG_SESSION_COOKIE_SAMESITE: 'Lax'
-      PGLADMIN_CONFIG_WTF_CSRF_ENABLED: 'False'
-      PGLADMIN_CONFIG_AUTO_CREATE_DB: 'True'
-      PGLADMIN_CONFIG_CONSOLE_LOG_LEVEL: 20
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      PGADMIN_CONFIG_SESSION_COOKIE_SECURE: 'False'
+      PGADMIN_CONFIG_SESSION_COOKIE_HTTPONLY: 'True'
+      PGADMIN_CONFIG_SESSION_COOKIE_SAMESITE: 'Lax'
+      PGADMIN_CONFIG_WTF_CSRF_ENABLED: 'False'
+      PGADMIN_CONFIG_AUTO_CREATE_DB: 'True'
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 20
+      # Variables adicionales para estabilidad
+      PGADMIN_CONFIG_DATA_DIR: '/var/lib/pgadmin'
+      PGADMIN_CONFIG_LOG_FILE: '/var/log/pgadmin/pgadmin4.log'
+      PGADMIN_CONFIG_SQLITE_PATH: '/var/lib/pgadmin/pgadmin4.db'
+      PGADMIN_CONFIG_SESSION_DB_PATH: '/var/lib/pgadmin/sessions'
+      PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: 'False'
+      PGADMIN_CONFIG_WTF_CSRF_TIME_LIMIT: 'None'
+      PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: 'False'
     ports:
       - "${PGLADMIN_PORT:-5050}:80"
     volumes:
-      - pgladmin_data:/var/lib/pgladmin
+      - pgadmin_data:/var/lib/pgadmin
       # Configuración adicional para persistir configuraciones
-      - ./pgladmin-config:/pgladmin-config:ro
+      - ./pgadmin-config:/pgadmin-config:ro
     networks:
       - postgres_network
     depends_on:
@@ -115,12 +123,12 @@ volumes:
       type: none
       o: bind
       device: ./postgres_data
-  pgladmin_data:
+  pgadmin_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ./pgladmin_data
+      device: ./pgadmin_data
 
 networks:
   postgres_network:
