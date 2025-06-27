@@ -72,16 +72,12 @@ services:
       PGADMIN_CONFIG_WTF_CSRF_ENABLED: 'False'
       PGADMIN_CONFIG_AUTO_CREATE_DB: 'True'
       PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 20
-      # Variables adicionales para estabilidad
-      PGADMIN_CONFIG_DATA_DIR: '/var/lib/pgadmin'
-      PGADMIN_CONFIG_LOG_FILE: '/var/log/pgadmin/pgadmin4.log'
-      PGADMIN_CONFIG_SQLITE_PATH: '/var/lib/pgadmin/pgadmin4.db'
-      PGADMIN_CONFIG_SESSION_DB_PATH: '/var/lib/pgadmin/sessions'
+      # Variables adicionales para estabilidad (solo las compatibles)
       PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: 'False'
       PGADMIN_CONFIG_WTF_CSRF_TIME_LIMIT: 'None'
       PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: 'False'
     ports:
-      - "${PGLADMIN_PORT:-5050}:80"
+      - "${PGADMIN_PORT:-5050}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       # Configuración adicional para persistir configuraciones
